@@ -70,6 +70,27 @@ echo Distro selecionada: %SISTEMA_OPERACIONAL%
 echo.
 
 echo ===========================================
+echo Testes
+echo ===========================================
+set /p "RODAR_TESTES=Deseja rodar os testes antes (padrao N)? (S/N): "
+if /i "!RODAR_TESTES!"=="S" (
+    echo.
+    echo Executando testes...
+    pushd "%PROJETO%"
+    call mvn test
+    if errorlevel 1 (
+        echo ERRO: Falha nos testes.
+        popd
+        pause
+        exit /b 1
+    )
+    popd
+) else (
+    echo Pulando testes.
+)
+
+echo.
+echo ===========================================
 echo Parando todas as distros WSL...
 echo ===========================================
 wsl --shutdown
