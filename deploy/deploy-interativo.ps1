@@ -6,18 +6,9 @@ $COMPOSE_FILE = "linux.docker-compose.yml"
 $PROJETO = "C:\ambiente\integracao-credito-legado"
 $ORIGEM = "$PROJETO\integracao-credito-legado-ear\target"
 
-function Run-Wsl([string]$cmd) {
-    wsl -d $global:SISTEMA_OPERACIONAL -- bash -c $cmd
-}
-
-function Run-WslSudo([string]$cmd) {
-    $pipe = "echo '$global:SENHA_UBUNTU' | sudo -S $cmd"
-    wsl -d $global:SISTEMA_OPERACIONAL -- bash -c $pipe
-}
-
 function Run-WslSudoBash([string]$script) {
     $pipe = "echo '$global:SENHA_UBUNTU' | sudo -S bash -c '$script'"
-    wsl -d $global:SISTEMA_OPERACIONAL -- bash -c $pipe
+    wsl -d $global:SISTEMA_OPERACIONAL -- bash -c "$pipe"
 }
 
 Clear-Host
@@ -33,6 +24,7 @@ $distros = @()
 $linhas = wsl -l -v
 $i = 1
 foreach ($linha in $linhas) {
+    $linha = $linha -replace "`0", ""
     if ($linha -match '^\*?\s*(.+?)\s+(Running)\s+') {
         $nome = $matches[1]
         $distros += @{ Id = $i; Nome = $nome }
@@ -101,7 +93,7 @@ Write-Host ""
 Write-Host "===========================================" -ForegroundColor Cyan
 Write-Host "Reiniciando containers Podman..." -ForegroundColor Cyan
 Write-Host "===========================================" -ForegroundColor Cyan
-Run-WslSudoBash "cd $COMPOSE_DIR && podman-compose -f $COMPOSE_FILE down && podman-compose -f $COMPOSE_FILE up -d && podman stop `$(podman ps -q) && podman start `$(podman ps -a -q)"
+Run-WslSudoBash "cd $COMPOSE_DIR && podman-compose -f $COMPOSE_FILE down && podman-compose -f $COMPOSE_FILE up -d && podman stop websphere-backoffice_websphere-backoffice-was9_1 && podman start websphere-backoffice_websphere-backoffice-was9_1"
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "ERRO ao reiniciar os containers." -ForegroundColor Red
