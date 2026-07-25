@@ -1,0 +1,98 @@
+
+1. Acessar a imagem do WAS via bash:
+
+	sudo docker exec -it webspherebackoffice_websphere-backoffice-was9_1 /bin/bash
+
+	cd /opt/IBM/WAS/WebSphere/AppServer/profiles/AppSrv01/bin
+
+	wsadmin.sh -lang jython
+
+2. Criar o bus (Caso o ambiente já estiver preparado para a liquidação automática não será necessário executar esse passo)
+
+	AdminTask.createSIBus('[-bus meubus -busSecurity false -scriptCompatibility 6.1 ]')
+	
+	AdminTask.addSIBusMember('[-bus meubus -node nd1 -server server1 -fileStore -logSize 100 -minPermanentStoreSize 200 -maxPermanentStoreSize 500 -unlimitedPermanentStoreSize false -minTemporaryStoreSize 200 -maxTemporaryStoreSize 500 -unlimitedTemporaryStoreSize false ]')
+	
+3. Adicionar destinos das filas ao BUS
+	
+	AdminTask.createSIBDestination('[-bus meubus -name QP.QL.CRE.LQD.PAGTO.AUT -type Queue -reliability ASSURED_PERSISTENT -description -node nd1 -server server1 ]')
+	
+	AdminTask.createSIBDestination('[-bus meubus -name QP.QL.CRE.LQD.PAGTO.LOTE -type Queue -reliability ASSURED_PERSISTENT -description -node nd1 -server server1 ]')
+	
+	AdminTask.createSIBDestination('[-bus meubus -name QP.QL.RSP.PAR.LIQUIDACAO -type Queue -reliability ASSURED_PERSISTENT -description -node nd1 -server server1 ]')
+
+	AdminTask.createSIBDestination('[-bus meubus -name QP.QL.CRE.LQD.PAGTO.FGTS -type Queue -reliability ASSURED_PERSISTENT -description -node nd1 -server server1 ]')
+
+	AdminTask.createSIBDestination('[-bus meubus -name QP.QL.RSP.FGTS.LIQUIDACAO -type Queue -reliability ASSURED_PERSISTENT -description -node nd1 -server server1 ]')
+	
+	AdminTask.createSIBDestination('[-bus meubus -name QP.QL.CRE.LQD.NOTIFICACAO.CCO -type Queue -reliability ASSURED_PERSISTENT -description -node nd1 -server server1 ]')
+	
+4. Criar Connection Factorys (Caso o ambiente esteja preparado para a liquidação automática não será necessário executar o primeiro comando deste tópico):
+	
+	AdminTask.createSIBJMSConnectionFactory('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)','[-type queue -name WSMQConnectionFactoryCRELQDPAGTOAUT -jndiName jms/WSMQConnectionFactoryCRELQDPAGTOAUT -description -category -busName meubus -nonPersistentMapping ExpressNonPersistent -readAhead Default -tempQueueNamePrefix -target -targetType BusMember -targetSignificance Preferred -targetTransportChain -providerEndPoints -connectionProximity Bus -authDataAlias -containerAuthAlias -mappingAlias -shareDataSourceWithCMP false -logMissingTransactionContext false -manageCachedHandles false -xaRecoveryAuthAlias -persistentMapping ReliablePersistent -consumerDoesNotModifyPayloadAfterGet false -producerDoesNotModifyPayloadAfterSet false]')
+	
+	AdminTask.createSIBJMSConnectionFactory('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)','[-type queue -name WSMQJmsPARCONDUCAO -jndiName WSMQJmsPARCONDUCAO -description -category -busName meubus -nonPersistentMapping ExpressNonPersistent -readAhead Default -tempQueueNamePrefix -target -targetType BusMember -targetSignificance Preferred -targetTransportChain -providerEndPoints -connectionProximity Bus -authDataAlias -containerAuthAlias -mappingAlias -shareDataSourceWithCMP false -logMissingTransactionContext false -manageCachedHandles false -xaRecoveryAuthAlias -persistentMapping ReliablePersistent -consumerDoesNotModifyPayloadAfterGet false -producerDoesNotModifyPayloadAfterSet false]')
+	
+	AdminTask.createSIBJMSConnectionFactory('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)','[-type queue -name WSMQJmsFGTS -jndiName WSMQJmsFGTS -description -category -busName meubus -nonPersistentMapping ExpressNonPersistent -readAhead Default -tempQueueNamePrefix -target -targetType BusMember -targetSignificance Preferred -targetTransportChain -providerEndPoints -connectionProximity Bus -authDataAlias -containerAuthAlias -mappingAlias -shareDataSourceWithCMP false -logMissingTransactionContext false -manageCachedHandles false -xaRecoveryAuthAlias -persistentMapping ReliablePersistent -consumerDoesNotModifyPayloadAfterGet false -producerDoesNotModifyPayloadAfterSet false]')	
+	
+	AdminTask.createSIBJMSConnectionFactory('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)','[-type queue -name WSMQueueConnectionFactoryCRELQDCCO -jndiName jms/WSMQueueConnectionFactoryCRELQDCCO -description -category -busName meubus -nonPersistentMapping ExpressNonPersistent -readAhead Default -tempQueueNamePrefix -target -targetType BusMember -targetSignificance Preferred -targetTransportChain -providerEndPoints -connectionProximity Bus -authDataAlias -containerAuthAlias -mappingAlias -shareDataSourceWithCMP false -logMissingTransactionContext false -manageCachedHandles false -xaRecoveryAuthAlias -persistentMapping ReliablePersistent -consumerDoesNotModifyPayloadAfterGet false -producerDoesNotModifyPayloadAfterSet false]')	
+
+5. Criar as filas (Caso o ambiente esteja preparado para a liquidação automática não será necessário executar o primeiro comando deste tópico):
+
+	AdminTask.createSIBJMSQueue('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.CRE.LQD.PAGTO.AUT -jndiName queue/QL.CRE.LQD.PAGTO.AUT -description -deliveryMode Application -readAhead AsConnection -busName meubus -queueName QP.QL.CRE.LQD.PAGTO.AUT -scopeToLocalQP false -producerBind false -producerPreferLocal true -gatherMessages false]')
+
+	AdminTask.createSIBJMSQueue('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.CRE.LQD.PAGTO.LOTE -jndiName queue/QL.CRE.LQD.PAGTO.LOTE -description -deliveryMode Application -readAhead AsConnection -busName meubus -queueName QP.QL.CRE.LQD.PAGTO.LOTE -scopeToLocalQP false -producerBind false -producerPreferLocal true -gatherMessages false]')
+
+	AdminTask.createSIBJMSQueue('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.RSP.PAR.LIQUIDACAO -jndiName queue/QL.RSP.PAR.LIQUIDACAO -description -deliveryMode Application -readAhead AsConnection -busName meubus -queueName QP.QL.RSP.PAR.LIQUIDACAO -scopeToLocalQP false -producerBind false -producerPreferLocal true -gatherMessages false]')
+
+	AdminTask.createSIBJMSQueue('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.CRE.LQD.PAGTO.FGTS -jndiName queue/QL.CRE.LQD.PAGTO.FGTS -description -deliveryMode Application -readAhead AsConnection -busName meubus -queueName QP.QL.CRE.LQD.PAGTO.FGTS -scopeToLocalQP false -producerBind false -producerPreferLocal true -gatherMessages false]')
+
+	AdminTask.createSIBJMSQueue('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.RSP.FGTS.LIQUIDACAO -jndiName queue/QL.RSP.FGTS.LIQUIDACAO -description -deliveryMode Application -readAhead AsConnection -busName meubus -queueName QP.QL.RSP.FGTS.LIQUIDACAO -scopeToLocalQP false -producerBind false -producerPreferLocal true -gatherMessages false]')
+	
+	AdminTask.createSIBJMSQueue('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.CRE.LQD.NOTIFICACAO.CCO -jndiName queue/QL.CRE.LQD.NOTIFICACAO.CCO -description -deliveryMode Application -readAhead AsConnection -busName meubus -queueName QP.QL.CRE.LQD.NOTIFICACAO.CCO -scopeToLocalQP false -producerBind false -producerPreferLocal true -gatherMessages false]')
+
+6. Crias as especificações de ativação (Caso o ambiente esteja preparado para a liquidação automática não será necessário executar o primeiro comando deste tópico):
+
+	AdminTask.createSIBJMSActivationSpec('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.CRE.LQD.PAGTO.AUT.AS -jndiName as/QL.CRE.LQD.PAGTO.AUT.AS -destinationJndiName queue/QL.CRE.LQD.PAGTO.AUT -connectionFactoryLookup -description -busName meubus -clientId -durableSubscriptionHome nd1.server1-meubus -destinationType javax.jms.Queue -messageSelector -acknowledgeMode Auto-acknowledge -subscriptionName -maxBatchSize 1 -maxConcurrency 10 -subscriptionDurability NonDurable -shareDurableSubscriptions InCluster -authenticationAlias -readAhead Default -target -targetType BusMember -targetSignificance Preferred -targetTransportChain -providerEndPoints -shareDataSourceWithCMP false -consumerDoesNotModifyPayloadAfterGet false -forwarderDoesNotModifyPayloadAfterSet false -alwaysActivateAllMDBs false -retryInterval 30 -autoStopSequentialMessageFailure 0 -failingMessageDelay 0]')
+	
+	AdminTask.createSIBJMSActivationSpec('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.CRE.LQD.PAGTO.LOTE.AS -jndiName as/QL.CRE.LQD.PAGTO.LOTE.AS -destinationJndiName queue/QL.CRE.LQD.PAGTO.LOTE -connectionFactoryLookup -description -busName meubus -clientId -durableSubscriptionHome nd1.server1-meubus -destinationType javax.jms.Queue -messageSelector -acknowledgeMode Auto-acknowledge -subscriptionName -maxBatchSize 1 -maxConcurrency 10 -subscriptionDurability NonDurable -shareDurableSubscriptions InCluster -authenticationAlias -readAhead Default -target -targetType BusMember -targetSignificance Preferred -targetTransportChain -providerEndPoints -shareDataSourceWithCMP false -consumerDoesNotModifyPayloadAfterGet false -forwarderDoesNotModifyPayloadAfterSet false -alwaysActivateAllMDBs false -retryInterval 30 -autoStopSequentialMessageFailure 0 -failingMessageDelay 0]')
+
+	AdminTask.createSIBJMSActivationSpec('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.CRE.LQD.PAGTO.FGTS.AS -jndiName as/QL.CRE.LQD.PAGTO.FGTS.AS -destinationJndiName queue/QL.CRE.LQD.PAGTO.FGTS -connectionFactoryLookup -description -busName meubus -clientId -durableSubscriptionHome nd1.server1-meubus -destinationType javax.jms.Queue -messageSelector -acknowledgeMode Auto-acknowledge -subscriptionName -maxBatchSize 1 -maxConcurrency 10 -subscriptionDurability NonDurable -shareDurableSubscriptions InCluster -authenticationAlias -readAhead Default -target -targetType BusMember -targetSignificance Preferred -targetTransportChain -providerEndPoints -shareDataSourceWithCMP false -consumerDoesNotModifyPayloadAfterGet false -forwarderDoesNotModifyPayloadAfterSet false -alwaysActivateAllMDBs false -retryInterval 30 -autoStopSequentialMessageFailure 0 -failingMessageDelay 0]')
+
+	AdminTask.createSIBJMSActivationSpec('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.RSP.FGTS.LIQUIDACAO.AS -jndiName as/QL.RSP.FGTS.LIQUIDACAO.AS -destinationJndiName queue/QL.RSP.FGTS.LIQUIDACAO -connectionFactoryLookup -description -busName meubus -clientId -durableSubscriptionHome nd1.server1-meubus -destinationType javax.jms.Queue -messageSelector -acknowledgeMode Auto-acknowledge -subscriptionName -maxBatchSize 1 -maxConcurrency 10 -subscriptionDurability NonDurable -shareDurableSubscriptions InCluster -authenticationAlias -readAhead Default -target -targetType BusMember -targetSignificance Preferred -targetTransportChain -providerEndPoints -shareDataSourceWithCMP false -consumerDoesNotModifyPayloadAfterGet false -forwarderDoesNotModifyPayloadAfterSet false -alwaysActivateAllMDBs false -retryInterval 30 -autoStopSequentialMessageFailure 0 -failingMessageDelay 0]')	
+	
+	AdminTask.createSIBJMSActivationSpec('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.CRE.LQD.NOTIFICACAO.CCO.AS -jndiName as/QL.CRE.LQD.NOTIFICACAO.CCO.AS -destinationJndiName queue/QL.CRE.LQD.NOTIFICACAO.CCO -connectionFactoryLookup -description -busName meubus -clientId -durableSubscriptionHome nd1.server1-meubus -destinationType javax.jms.Queue -messageSelector -acknowledgeMode Auto-acknowledge -subscriptionName -maxBatchSize 1 -maxConcurrency 10 -subscriptionDurability NonDurable -shareDurableSubscriptions InCluster -authenticationAlias -readAhead Default -target -targetType BusMember -targetSignificance Preferred -targetTransportChain -providerEndPoints -shareDataSourceWithCMP false -consumerDoesNotModifyPayloadAfterGet false -forwarderDoesNotModifyPayloadAfterSet false -alwaysActivateAllMDBs false -retryInterval 30 -autoStopSequentialMessageFailure 0 -failingMessageDelay 0]')	
+
+7. Efetivando as configurações:
+	
+	AdminConfig.modify('(cells/cell01/nodes/nd1/servers/server1|server.xml#TransactionService_1183122130078)', '[[totalTranLifetimeTimeout "300"] [httpProxyPrefix ""] [LPSHeuristicCompletion "ROLLBACK"] [httpsProxyPrefix ""] [wstxURLPrefixSpecified "false"] [enableFileLocking "true"] [enable "true"] [transactionLogDirectory "/opt/IBM/WAS/WebSphere/AppServer/profiles/AppSrv01/tranlog/cell01/nd1/server1/transaction;10M"] [enableProtocolSecurity "true"] [heuristicRetryWait "0"] [propogatedOrBMTTranLifetimeTimeout "420"] [enableLoggingForHeuristicReporting "false"] [asyncResponseTimeout "60"] [clientInactivityTimeout "120"] [heuristicRetryLimit "0"] [acceptHeuristicHazard "false"]]')
+	
+	AdminConfig.save()
+	
+8. Após a execução do procedimento, reiniciar o docker
+
+
+COP:
+
+	AdminTask.createSIBDestination('[-bus meubus -name QP.QL.COP.MARCACAOATIVOPROBLEMATICOCRE -type Queue -reliability ASSURED_PERSISTENT -description -node nd1 -server server1 ]')
+	AdminTask.createSIBDestination('[-bus meubus -name QP.QL.COP.MARCACAOATIVOPROBLEMATICO -type Queue -reliability ASSURED_PERSISTENT -description -node nd1 -server server1 ]')
+	AdminTask.createSIBDestination('[-bus meubus -name QP.QL.COP.RESPMARCACAOATIVOPROBLEMATICO -type Queue -reliability ASSURED_PERSISTENT -description -node nd1 -server server1 ]')
+	
+	
+AdminTask.createSIBJMSConnectionFactory('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)','[-type queue -name WSMQueueConnectionFactoryCOP -jndiName WSMQueueConnectionFactoryCOP -description -category -busName meubus -nonPersistentMapping ExpressNonPersistent -readAhead Default -tempQueueNamePrefix -target -targetType BusMember -targetSignificance Preferred -targetTransportChain -providerEndPoints -connectionProximity Bus -authDataAlias -containerAuthAlias -mappingAlias -shareDataSourceWithCMP false -logMissingTransactionContext false -manageCachedHandles false -xaRecoveryAuthAlias -persistentMapping ReliablePersistent -consumerDoesNotModifyPayloadAfterGet false -producerDoesNotModifyPayloadAfterSet false]')
+	
+AdminTask.createSIBJMSConnectionFactory('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)','[-type queue -name WSMQUEUECONNECTIONFACTORYCRE -jndiName WSMQueueConnectionFactoryCRE -description -category -busName meubus -nonPersistentMapping ExpressNonPersistent -readAhead Default -tempQueueNamePrefix -target -targetType BusMember -targetSignificance Preferred -targetTransportChain -providerEndPoints -connectionProximity Bus -authDataAlias -containerAuthAlias -mappingAlias -shareDataSourceWithCMP false -logMissingTransactionContext false -manageCachedHandles false -xaRecoveryAuthAlias -persistentMapping ReliablePersistent -consumerDoesNotModifyPayloadAfterGet false -producerDoesNotModifyPayloadAfterSet false]')
+	
+	
+AdminTask.createSIBJMSQueue('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.COP.MARCACAOATIVOPROBLEMATICOCRE -jndiName queue/QL.COP.MARCACAOATIVOPROBLEMATICOCRE -description -deliveryMode Application -readAhead AsConnection -busName meubus -queueName QP.QL.COP.MARCACAOATIVOPROBLEMATICOCRE -scopeToLocalQP false -producerBind false -producerPreferLocal true -gatherMessages false]')
+	
+AdminTask.createSIBJMSQueue('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.COP.MARCACAOATIVOPROBLEMATICO -jndiName queue/QL.COP.MARCACAOATIVOPROBLEMATICO -description -deliveryMode Application -readAhead AsConnection -busName meubus -queueName QP.QL.COP.MARCACAOATIVOPROBLEMATICO -scopeToLocalQP false -producerBind false -producerPreferLocal true -gatherMessages false]')
+
+AdminTask.createSIBJMSQueue('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.COP.MARCACAOATIVOPROBLEMATICO -jndiName queue/QL.COP.MARCACAOATIVOPROBLEMATICO -description -deliveryMode Application -readAhead AsConnection -busName meubus -queueName QP.QL.COP.MARCACAOATIVOPROBLEMATICO -scopeToLocalQP false -producerBind false -producerPreferLocal true -gatherMessages false]')
+
+AdminTask.createSIBJMSQueue('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.COP.RESPMARCACAOATIVOPROBLEMATICO -jndiName queue/QL.COP.RESPMARCACAOATIVOPROBLEMATICO -description -deliveryMode Application -readAhead AsConnection -busName meubus -queueName QP.QL.COP.RESPMARCACAOATIVOPROBLEMATICO -scopeToLocalQP false -producerBind false -producerPreferLocal true -gatherMessages false]')
+	
+
+	AdminTask.createSIBJMSActivationSpec('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.COP.MARCACAOATIVOPROBLEMATICOCRE -jndiName as/QL.COP.MARCACAOATIVOPROBLEMATICOCRE.AS -destinationJndiName queue/QL.COP.MARCACAOATIVOPROBLEMATICOCRE -connectionFactoryLookup -description -busName meubus -clientId -durableSubscriptionHome nd1.server1-meubus -destinationType javax.jms.Queue -messageSelector -acknowledgeMode Auto-acknowledge -subscriptionName -maxBatchSize 1 -maxConcurrency 10 -subscriptionDurability NonDurable -shareDurableSubscriptions InCluster -authenticationAlias -readAhead Default -target -targetType BusMember -targetSignificance Preferred -targetTransportChain -providerEndPoints -shareDataSourceWithCMP false -consumerDoesNotModifyPayloadAfterGet false -forwarderDoesNotModifyPayloadAfterSet false -alwaysActivateAllMDBs false -retryInterval 30 -autoStopSequentialMessageFailure 0 -failingMessageDelay 0]')	
+
+AdminTask.createSIBJMSActivationSpec('server1(cells/cell01/nodes/nd1/servers/server1|server.xml)', '[-name QL.COP.RESPMARCACAOATIVOPROBLEMATICO -jndiName as/QL.COP.RESPMARCACAOATIVOPROBLEMATICO.AS -destinationJndiName queue/QL.COP.RESPMARCACAOATIVOPROBLEMATICO -connectionFactoryLookup -description -busName meubus -clientId -durableSubscriptionHome nd1.server1-meubus -destinationType javax.jms.Queue -messageSelector -acknowledgeMode Auto-acknowledge -subscriptionName -maxBatchSize 1 -maxConcurrency 10 -subscriptionDurability NonDurable -shareDurableSubscriptions InCluster -authenticationAlias -readAhead Default -target -targetType BusMember -targetSignificance Preferred -targetTransportChain -providerEndPoints -shareDataSourceWithCMP false -consumerDoesNotModifyPayloadAfterGet false -forwarderDoesNotModifyPayloadAfterSet false -alwaysActivateAllMDBs false -retryInterval 30 -autoStopSequentialMessageFailure 0 -failingMessageDelay 0]')
