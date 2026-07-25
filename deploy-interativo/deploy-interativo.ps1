@@ -1,3 +1,8 @@
+param(
+    [string]$Distro,
+    [switch]$RunTests
+)
+
 $USUARIO = "cristiano"
 $SENHA_UBUNTU = "12345"
 $TEMPO_ESPERA = 20
@@ -5,6 +10,7 @@ $COMPOSE_DIR = "/opt/docker_was/was9-desenv-envioriment/websphere-backoffice"
 $COMPOSE_FILE = "linux.docker-compose.yml"
 $PROJETO = "C:\ambiente\integracao-credito-legado"
 $ORIGEM = "$PROJETO\integracao-credito-legado-ear\target"
+$CONTAINER_NAME = "websphere-backoffice_websphere-backoffice-was9_1"
 
 function Run-WslSudoBash([string]$script) {
     $pipe = "echo '$global:SENHA_UBUNTU' | sudo -S bash -c '$script'"
@@ -17,55 +23,61 @@ Write-Host "    DEPLOY INTERATIVO - WSL + WAS" -ForegroundColor Cyan
 Write-Host "===========================================" -ForegroundColor Cyan
 Write-Host ""
 
-Write-Host "Detectando distros WSL em execucao..." -ForegroundColor Yellow
-Write-Host ""
+if (-not $Distro) {
+    Write-Host "Detectando distros WSL em execucao..." -ForegroundColor Yellow
+    Write-Host ""
 
-$distros = @()
-$linhas = wsl -l -v
-$i = 1
-foreach ($linha in $linhas) {
-    $linha = $linha -replace "`0", ""
-    if ($linha -match '^\*?\s*(.+?)\s+(Running)\s+') {
-        $nome = $matches[1]
-        $distros += @{ Id = $i; Nome = $nome }
-        Write-Host "  [$i] $nome" -ForegroundColor White
-        $i++
+    $distros = @()
+    $linhas = wsl -l -v
+    $i = 1
+    foreach ($linha in $linhas) {
+        $linha = $linha -replace "`0", ""
+        if ($linha -match '^\*?\s*(.+?)\s+(Running)\s+') {
+            $nome = $matches[1]
+            $distros += @{ Id = $i; Nome = $nome }
+            Write-Host "  [$i] $nome" -ForegroundColor White
+            $i++
+        }
     }
-}
 
-if ($distros.Count -eq 0) {
-    Write-Host "Nenhuma distro WSL em execucao encontrada." -ForegroundColor Yellow
-    $global:SISTEMA_OPERACIONAL = "Ubuntu-22.04"
-    Write-Host "Usando fallback: $global:SISTEMA_OPERACIONAL" -ForegroundColor Gray
-} elseif ($distros.Count -eq 1) {
-    $global:SISTEMA_OPERACIONAL = $distros[0].Nome
-    Write-Host ""
-    Write-Host "Apenas uma distro encontrada. Usando $global:SISTEMA_OPERACIONAL..." -ForegroundColor Green
-} else {
-    Write-Host ""
-    $escolha = Read-Host "Escolha o numero da distro onde o servidor esta"
-    $sel = $distros | Where-Object { $_.Id -eq [int]$escolha }
-    if ($sel) {
-        $global:SISTEMA_OPERACIONAL = $sel.Nome
-    } else {
+    if ($distros.Count -eq 0) {
+        Write-Host "Nenhuma distro WSL em execucao encontrada." -ForegroundColor Yellow
+        $global:SISTEMA_OPERACIONAL = "Ubuntu-22.04"
+        Write-Host "Usando fallback: $global:SISTEMA_OPERACIONAL" -ForegroundColor Gray
+    } elseif ($distros.Count -eq 1) {
         $global:SISTEMA_OPERACIONAL = $distros[0].Nome
-        Write-Host "Opcao invalida. Usando $global:SISTEMA_OPERACIONAL..." -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Apenas uma distro encontrada. Usando $global:SISTEMA_OPERACIONAL..." -ForegroundColor Green
+    } else {
+        Write-Host ""
+        $escolha = Read-Host "Escolha o numero da distro onde o servidor esta"
+        $sel = $distros | Where-Object { $_.Id -eq [int]$escolha }
+        if ($sel) {
+            $global:SISTEMA_OPERACIONAL = $sel.Nome
+        } else {
+            $global:SISTEMA_OPERACIONAL = $distros[0].Nome
+            Write-Host "Opcao invalida. Usando $global:SISTEMA_OPERACIONAL..." -ForegroundColor Yellow
+        }
     }
+} else {
+    $global:SISTEMA_OPERACIONAL = $Distro
+    Write-Host "Distro informada: $global:SISTEMA_OPERACIONAL" -ForegroundColor Green
 }
-
-Write-Host ""
-Write-Host "Distro selecionada: $global:SISTEMA_OPERACIONAL" -ForegroundColor Green
 Write-Host ""
 
 $WSL_PATH = "wsl.localhost\$SISTEMA_OPERACIONAL\home\$USUARIO\sicoob-linux-environment\GitLab\was9-desenv-envioriment"
 $DEPLOY_PATH = "\\$WSL_PATH\deploy"
 $LOGS_PATH = "\\$WSL_PATH\logs\was\server1"
 
-Write-Host "===========================================" -ForegroundColor Cyan
-Write-Host "Testes" -ForegroundColor Cyan
-Write-Host "===========================================" -ForegroundColor Cyan
-$rodarTestes = Read-Host "Deseja rodar os testes antes (padrao N)? (S/N)"
-if ($rodarTestes -eq "S" -or $rodarTestes -eq "s") {
+if (-not $RunTests -and -not $PSBoundParameters.ContainsKey('RunTests')) {
+    Write-Host "===========================================" -ForegroundColor Cyan
+    Write-Host "Testes" -ForegroundColor Cyan
+    Write-Host "===========================================" -ForegroundColor Cyan
+    $resp = Read-Host "Deseja rodar os testes antes (padrao N)? (S/N)"
+    $RunTests = ($resp -eq "S" -or $resp -eq "s")
+}
+
+if ($RunTests) {
     Write-Host ""
     Write-Host "Executando testes..." -ForegroundColor Yellow
     Push-Location $PROJETO
@@ -93,7 +105,7 @@ Write-Host ""
 Write-Host "===========================================" -ForegroundColor Cyan
 Write-Host "Reiniciando containers Podman..." -ForegroundColor Cyan
 Write-Host "===========================================" -ForegroundColor Cyan
-Run-WslSudoBash "cd $COMPOSE_DIR && podman-compose -f $COMPOSE_FILE down && podman-compose -f $COMPOSE_FILE up -d && podman stop websphere-backoffice_websphere-backoffice-was9_1 && podman start websphere-backoffice_websphere-backoffice-was9_1"
+Run-WslSudoBash "cd $COMPOSE_DIR && podman-compose -f $COMPOSE_FILE down && podman-compose -f $COMPOSE_FILE up -d && podman stop $CONTAINER_NAME && podman start $CONTAINER_NAME"
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "ERRO ao reiniciar os containers." -ForegroundColor Red
