@@ -4,12 +4,6 @@ setlocal EnableExtensions EnableDelayedExpansion
 REM =====================================================
 REM CONFIGURACOES
 REM =====================================================
-if "%1"=="" (
-    set "SISTEMA_OPERACIONAL=Ubuntu-22.04"
-) else (
-    set "SISTEMA_OPERACIONAL=%1"
-)
-
 set "USUARIO=cristiano"
 set "SENHA_UBUNTU=12345"
 set "TEMPO_ESPERA=20"
@@ -19,14 +13,60 @@ set "COMPOSE_FILE=linux.docker-compose.yml"
 
 set "PROJETO=C:\ambiente\integracao-credito-legado"
 set "ORIGEM=%PROJETO%\integracao-credito-legado-ear\target"
+
+REM =====================================================
+REM SELECAO INTERATIVA DO WSL
+REM =====================================================
+echo ===========================================
+echo     DEPLOY INTERATIVO - WSL + WAS
+echo ===========================================
+echo.
+echo Detectando distros WSL em execucao...
+echo.
+
+set COUNT=0
+
+for /f "skip=1 tokens=1-3 delims= " %%a in ('wsl -l -v 2^>nul') do (
+    if "%%a"=="*" (
+        if "%%c"=="Running" (
+            set /a COUNT+=1
+            set "DISTRO_!COUNT!=%%b"
+            echo   [!COUNT!] %%b
+        )
+    ) else (
+        if "%%b"=="Running" (
+            set /a COUNT+=1
+            set "DISTRO_!COUNT!=%%a"
+            echo   [!COUNT!] %%a
+        )
+    )
+)
+
+if !COUNT!==0 (
+    echo Nenhuma distro WSL em execucao encontrada.
+    echo Usando fallback: Ubuntu-22.04
+    set "SISTEMA_OPERACIONAL=Ubuntu-22.04"
+) else if !COUNT!==1 (
+    echo.
+    echo Apenas uma distro encontrada. Usando !DISTRO_1!...
+    set "SISTEMA_OPERACIONAL=!DISTRO_1!"
+) else (
+    echo.
+    set /p "ESCOLHA=Escolha o numero da distro onde o servidor esta: "
+    if not defined DISTRO_!ESCOLHA! (
+        echo Opcao invalida. Usando !DISTRO_1!...
+        set "SISTEMA_OPERACIONAL=!DISTRO_1!"
+    ) else (
+        for %%i in (!ESCOLHA!) do set "SISTEMA_OPERACIONAL=!DISTRO_%%i!"
+    )
+)
+
 set "WSL_PATH=wsl.localhost\%SISTEMA_OPERACIONAL%\home\%USUARIO%\sicoob-linux-environment\GitLab\was9-desenv-envioriment"
 set "DEPLOY=\\%WSL_PATH%\deploy"
 set "LOGS=\\%WSL_PATH%\logs\was\server1"
 
-echo ===========================================
-echo Script interativo de deploy
-echo ===========================================
-echo Sistema Operacional: %SISTEMA_OPERACIONAL%
+echo.
+echo Distro selecionada: %SISTEMA_OPERACIONAL%
 echo.
 
 echo ===========================================
