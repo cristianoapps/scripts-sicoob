@@ -157,11 +157,11 @@ Write-Host "Limpando logs para nova execucao..." -ForegroundColor Cyan
 Write-Host "===========================================" -ForegroundColor Cyan
 
 if (Test-Path "$LOGS_PATH\SystemOut.log") {
-    Clear-Content -Path "$LOGS_PATH\SystemOut.log"
+    & cmd /c "type nul > `"$LOGS_PATH\SystemOut.log`""
     Write-Host "SystemOut.log limpo." -ForegroundColor Green
 }
 if (Test-Path "$LOGS_PATH\SystemErr.log") {
-    Clear-Content -Path "$LOGS_PATH\SystemErr.log"
+    & cmd /c "type nul > `"$LOGS_PATH\SystemErr.log`""
     Write-Host "SystemErr.log limpo." -ForegroundColor Green
 }
 
