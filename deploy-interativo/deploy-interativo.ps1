@@ -3,6 +3,10 @@ param(
     [switch]$RunTests
 )
 
+Add-Type -Name W -Namespace S -MemberDefinition '[DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);'
+$hwnd = (Get-Process -Id $pid).MainWindowHandle
+if ($hwnd -ne [IntPtr]::Zero) { [S.W]::ShowWindowAsync($hwnd, 3) | Out-Null }
+
 $USUARIO = "cristiano"
 $SENHA_UBUNTU = "12345"
 $TEMPO_ESPERA = 20
@@ -15,6 +19,11 @@ $CONTAINER_NAME = "websphere-backoffice_websphere-backoffice-was9_1"
 function Run-WslSudoBash([string]$script) {
     $pipe = "echo '$global:SENHA_UBUNTU' | sudo -S bash -c '$script'"
     wsl -d $global:SISTEMA_OPERACIONAL -- bash -c "$pipe"
+}
+
+function ContainerExists([string]$name) {
+    $result = wsl -d $global:SISTEMA_OPERACIONAL -- bash -c "echo '$global:SENHA_UBUNTU' | sudo -S podman ps -a -q --filter name=$name 2>/dev/null"
+    return [bool]$result
 }
 
 Clear-Host
@@ -103,9 +112,16 @@ Start-Sleep -Seconds 5
 
 Write-Host ""
 Write-Host "===========================================" -ForegroundColor Cyan
-Write-Host "Reiniciando containers Podman..." -ForegroundColor Cyan
+Write-Host "Iniciando containers Podman..." -ForegroundColor Cyan
 Write-Host "===========================================" -ForegroundColor Cyan
-Run-WslSudoBash "cd $COMPOSE_DIR && podman-compose -f $COMPOSE_FILE down && podman-compose -f $COMPOSE_FILE up -d && podman stop $CONTAINER_NAME && podman start $CONTAINER_NAME"
+
+if (ContainerExists $CONTAINER_NAME) {
+    Write-Host "Container ja existe. Apenas restartando..." -ForegroundColor Yellow
+    Run-WslSudoBash "podman stop $CONTAINER_NAME && podman start $CONTAINER_NAME"
+} else {
+    Write-Host "Container nao encontrado. Criando..." -ForegroundColor Yellow
+    Run-WslSudoBash "cd $COMPOSE_DIR && podman-compose -f $COMPOSE_FILE up -d && podman stop $CONTAINER_NAME && podman start $CONTAINER_NAME"
+}
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "ERRO ao reiniciar os containers." -ForegroundColor Red
@@ -179,6 +195,13 @@ if ($?) {
     Write-Host "===========================================" -ForegroundColor Green
     Write-Host "DEPLOY FINALIZADO COM SUCESSO" -ForegroundColor Green
     Write-Host "===========================================" -ForegroundColor Green
+
+    Write-Host ""
+    Write-Host "Acompanhando log do WebSphere (Ctrl+C para sair)..." -ForegroundColor Yellow
+    Write-Host ""
+    Start-Sleep -Seconds 2
+    $logLinux = "/home/$USUARIO/sicoob-linux-environment/GitLab/was9-desenv-envioriment/logs/was/server1/SystemOut.log"
+    wsl -d $global:SISTEMA_OPERACIONAL -- bash -c "tail -f '$logLinux'"
 } else {
     Write-Host "ERRO ao copiar o EAR." -ForegroundColor Red
     pause
