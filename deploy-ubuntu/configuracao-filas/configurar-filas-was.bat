@@ -4,7 +4,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 REM =====================================================
 REM CONFIGURACOES
 REM =====================================================
-set "SISTEMA_OPERACIONAL=Ubuntu-Podman-Testes"
+set "SISTEMA_OPERACIONAL=Ubuntu-22.04"
 set "USUARIO=cristiano"
 set "SENHA_UBUNTU=12345"
 

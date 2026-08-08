@@ -1,0 +1,10 @@
+@echo off
+setlocal
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0cria-banco-sqlserver-podman.ps1" %*
+set "EXIT_CODE=%ERRORLEVEL%"
+
+echo.
+echo Processo finalizado com codigo %EXIT_CODE%.
+pause
+endlocal & exit /b %EXIT_CODE%
